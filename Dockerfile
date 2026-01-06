@@ -21,7 +21,7 @@ RUN apt update -qq && \
 
 # Configure SSH (for fallback / direct ssh if you ever need it)
 RUN mkdir -p /var/run/sshd && \
-    echo 'root:change-me-please' | chpasswd && \
+    echo 'root:root' | chpasswd && \
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
     # SSH login fix (common requirement in Docker)
     sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
