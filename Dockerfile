@@ -3,7 +3,7 @@ FROM kalilinux/kali-rolling
 # Avoid interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Update and install basic utilities + openssh-server + curl (for sshx)
+# Update and install basic utilities + openssh-server + curl (for sshx) + headless Kali tools
 RUN apt update -qq && \
     apt upgrade -y -qq && \
     apt install -y --no-install-recommends \
@@ -14,16 +14,13 @@ RUN apt update -qq && \
         iproute2 \
         nano \
         wget \
-        && \
-    # Optional: install a common set of Kali tools (change as needed)
-    # Use 'kali-linux-default' for ~most used tools, or 'kali-linux-large' / 'kali-linux-everything'
-    apt install -y --no-install-recommends kali-linux-default && \
+        kali-linux-headless && \
     # Clean up to keep image size smaller
     apt clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*
 
 # Configure SSH (for fallback / direct ssh if you ever need it)
-RUN mkdir /var/run/sshd && \
+RUN mkdir -p /var/run/sshd && \
     echo 'root:change-me-please' | chpasswd && \
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
     # SSH login fix (common requirement in Docker)
@@ -38,7 +35,8 @@ RUN echo '#!/bin/bash' > /start.sh && \
     echo '' >> /start.sh && \
     echo 'echo "Launching sshx..."' >> /start.sh && \
     echo 'echo "When you see the sshx link → copy & open it in your browser"' >> /start.sh && \
-    echo 'exec curl -s https://sshx.io | bash' >> /start.sh && \
+    echo 'sleep 2  # Short wait for network stability' >> /start.sh && \
+    echo 'exec curl -sSf https://sshx.io/get | sh' >> /start.sh && \
     chmod +x /start.sh
 
 # Expose SSH port (optional — only if you want direct ssh -p <hostport> root@<hostip>)
