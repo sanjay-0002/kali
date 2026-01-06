@@ -2,24 +2,25 @@
 set -euo pipefail
 
 # ────────────────────────────────────────────────────────────────────────────────
-#  Kali + sshx container launcher
-#  (no GUI, browser-based terminal via sshx.io)
+#  Kali (headless/no GUI) + sshx container launcher
+#  (browser-based terminal via sshx.io)
 # ────────────────────────────────────────────────────────────────────────────────
 
 IMAGE_NAME="kali-sshx"
 CONTAINER_NAME="kali-sshx"
 
-echo "Kali Linux (no GUI) + sshx container manager"
+echo "Kali Linux (headless) + sshx container manager"
 echo "──────────────────────────────────────────────"
 echo ""
 
-# Optional: rebuild if Dockerfile changed (uncomment if you want auto-rebuild every time)
-# echo "Rebuilding image..."
-# docker build -t "${IMAGE_NAME}" .
+# Build or rebuild the image
+echo "Building/rebuilding image..."
+docker build -t "${IMAGE_NAME}" .
 
 echo "Launching container..."
 echo "  • When ready → sshx will print a link like https://sshx.io/s/xxxx-xxxx"
-echo "  • Open that link in any browser → instant shared terminal"
+echo "  • Open that link in any browser → instant shared terminal (root access)"
+echo "  • Tip: Change root password immediately with 'passwd'"
 echo ""
 
 docker run -it --rm \
