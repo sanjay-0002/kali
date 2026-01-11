@@ -1,43 +1,45 @@
 FROM kalilinux/kali-rolling
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV DISPLAY=:1
 
-# Install essentials + busybox (for httpd) + Kali headless tools
-RUN apt update -qq && \
-    apt upgrade -y -qq && \
+# Install XFCE + VNC + noVNC
+RUN apt update -qq && apt upgrade -y -qq && \
     apt install -y --no-install-recommends \
-        curl \
-        ca-certificates \
-        procps \
-        iproute2 \
-        nano \
-        wget \
-        busybox \
-        kali-linux-headless && \
-    # Download and install sshx binary during build (cached, fast)
-    curl -sSf https://sshx.io/get | sh && \
-    # Clean up to minimize size
-    apt clean && \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*
+    kali-linux-headless \
+    kali-desktop-xfce \
+    xfce4-terminal \
+    tigervnc-standalone-server \
+    tigervnc-common \
+    novnc \
+    websockify \
+    dbus-x11 \
+    nano wget curl procps iproute2 busybox && \
+    apt clean && rm -rf /var/lib/apt/lists/*
 
-# Optional: SSH config for fallback direct access
-RUN mkdir -p /var/run/sshd && \
-    echo 'root:root' | chpasswd && \
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
-    sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+# VNC password
+RUN mkdir -p /root/.vnc && \
+    echo "kali" | vncpasswd -f > /root/.vnc/passwd && \
+    chmod 600 /root/.vnc/passwd
+
+# XFCE startup
+RUN echo '#!/bin/sh' > /root/.vnc/xstartup && \
+    echo 'unset SESSION_MANAGER' >> /root/.vnc/xstartup && \
+    echo 'unset DBUS_SESSION_BUS_ADDRESS' >> /root/.vnc/xstartup && \
+    echo 'exec startxfce4 &' >> /root/.vnc/xstartup && \
+    chmod +x /root/.vnc/xstartup
 
 # Startup script
 RUN echo '#!/bin/bash' > /start.sh && \
     echo 'set -e' >> /start.sh && \
-    echo 'echo "Kali VPS is ready!"' >> /start.sh && \
-    echo 'echo "Launching sshx session... (check logs for the https://sshx.io/s/... link)"' >> /start.sh && \
-    echo 'sshx &' >> /start.sh && \
-    echo 'echo "Container alive - HTTP server running on port 10000 (for Render health check)"' >> /start.sh && \
-    echo '# Busybox httpd in foreground, no -h flag needed (uses cwd /)' >> /start.sh && \
-    echo 'exec busybox httpd -f -p 10000' >> /start.sh && \
+    echo 'echo "Starting VNC server..."' >> /start.sh && \
+    echo 'vncserver :1 -geometry 1280x800 -depth 24' >> /start.sh && \
+    echo 'echo "Starting noVNC web access..."' >> /start.sh && \
+    echo 'websockify --web=/usr/share/novnc/ 10000 localhost:5901 &' >> /start.sh && \
+    echo 'exec busybox httpd -f -p 8080' >> /start.sh && \
     chmod +x /start.sh
 
-# Tell Render the port (though it auto-detects)
 EXPOSE 10000
+EXPOSE 8080
 
 CMD ["/start.sh"]
